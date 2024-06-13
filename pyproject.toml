@@ -1,0 +1,17 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "tc_circuit"
+authors = [{name = "MegaIng", email = "trampchamp@hotmail.de"}]
+license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: MIT License"]
+dynamic = ["version", "description"]
+dependencies = ['pydantic']
+
+[project.scripts]
+tc-to-json = "tc_circuit.to_json:main"
+
+[project.urls]
+Home = "https://github.com/MegaIng/tc_circuit"
