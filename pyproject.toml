@@ -8,7 +8,7 @@ authors = [{name = "MegaIng", email = "trampchamp@hotmail.de"}]
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
-dependencies = ['pydantic']
+dependencies = ['pydantic', 'save-monger']
 
 [project.scripts]
 tc-to-json = "tc_circuit.to_json:main"
