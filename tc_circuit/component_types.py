@@ -33,13 +33,75 @@ class TCComponent:
         )
 
 
-@dataclass
-class LevelInputComponent(TCComponent):
+def _generate_larger(cls_or_pattern: type | str):
+    def inner(cls):
+        for n in (8, 16, 32, 64):
+            name = pattern.format(n=n)
+
+            class Larger(cls, kind=getattr(ComponentKind, name)):
+                pass
+
+            Larger.__name__ = name
+            Larger.__module__ = cls.__module__
+            Larger.__qualname__ = cls.__qualname__ + str(n)
+            globals()[name] = Larger
+        return cls
+
+    if isinstance(cls_or_pattern, type):
+        pattern = cls_or_pattern.__name__ + "{n}"
+        return inner(cls_or_pattern)
+    else:
+        pattern = cls_or_pattern
+        return inner
+
+
+@_generate_larger
+class Input(TCComponent):
+    pass
+
+
+class Input1(Input, kind=ComponentKind.Input1):
+    pass
+
+
+@_generate_larger
+class Output(TCComponent):
+    pass
+
+
+class Output1(Output, kind=ComponentKind.Output1):
+    pass
+
+
+@_generate_larger("Output{n}z")
+class OutputZ(TCComponent):
+    pass
+
+
+class Output1z(TCComponent, kind=ComponentKind.Output1z):
+    pass
+
+
+@_generate_larger
+class Bidirectional(TCComponent):
+    pass
+
+
+class Bidirectional1(TCComponent, kind=ComponentKind.Bidirectional1):
     pass
 
 
 @dataclass
-class LevelOutputComponent(TCComponent):
+class LevelInputComponent(Input):
+    pass
+
+
+@dataclass
+class LevelOutputComponent(Output):
+    pass
+
+
+class LevelInput1(LevelInputComponent, kind=ComponentKind.LevelInput1):
     pass
 
 
@@ -47,11 +109,55 @@ class LevelInput2Pin(LevelInputComponent, kind=ComponentKind.LevelInput2Pin):
     pass
 
 
+class LevelInput3Pin(LevelInputComponent, kind=ComponentKind.LevelInput3Pin):
+    pass
+
+
+class LevelInput4Pin(LevelInputComponent, kind=ComponentKind.LevelInput4Pin):
+    pass
+
+
+class LevelInputCode(LevelInputComponent, kind=ComponentKind.LevelInputCode):
+    pass
+
+
+class LevelInputConditions(LevelInputComponent, kind=ComponentKind.LevelInputConditions):
+    pass
+
+
 class LevelOutput1(LevelOutputComponent, kind=ComponentKind.LevelOutput1):
     pass
 
 
+class LevelOutput2Pin(LevelOutputComponent, kind=ComponentKind.LevelOutput2Pin):
+    pass
+
+
+class LevelOutput3Pin(LevelOutputComponent, kind=ComponentKind.LevelOutput3Pin):
+    pass
+
+
+class LevelOutput4Pin(LevelOutputComponent, kind=ComponentKind.LevelOutput4Pin):
+    pass
+
+
+class LevelOutput1Sum(LevelOutputComponent, kind=ComponentKind.LevelOutput1Sum):
+    pass
+
+
+class LevelOutput1Carry(LevelOutputComponent, kind=ComponentKind.LevelOutput1Car):
+    pass
+
+
+class LevelOutputCounter(LevelOutputComponent, kind=ComponentKind.LevelOutputCounter):
+    pass
+
+
 class LevelOutputArch(TCComponent, kind=ComponentKind.LevelOutputArch):
+    pass
+
+
+class LevelOutput8z(TCComponent, kind=ComponentKind.LevelOutput8z):
     pass
 
 
@@ -70,53 +176,264 @@ class LevelOutput8(LevelOutputComponent, kind=ComponentKind.LevelOutput8):
 
 
 @dataclass
-class BitLogic(TCComponent):
-    pos: Point
+class MemoryComponent(TCComponent):
+    link_id: int
 
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, **kwargs, link_id=parse_component.permanent_id)
+
+
+@dataclass
+class BitwiseLogic(TCComponent):
     op: ClassVar[str | None] = None
 
 
-class Nand(BitLogic, kind=ComponentKind.Nand):
+@_generate_larger
+class Nand(BitwiseLogic, kind=ComponentKind.Nand):
     op = "~({a} & {b})"
 
 
-class Or(BitLogic, kind=ComponentKind.Or):
+@_generate_larger
+class Nor(BitwiseLogic, kind=ComponentKind.Nor):
+    op = "~({a} | {b})"
+
+
+@_generate_larger
+class Or(BitwiseLogic, kind=ComponentKind.Or):
     op = "{a} | {b}"
 
 
-class Not(BitLogic, kind=ComponentKind.Not):
+class Or3(BitwiseLogic, kind=ComponentKind.Or3):
+    op = "{a} | {b} | {c}"
+
+
+class And3(BitwiseLogic, kind=ComponentKind.And3):
+    op = "{a} & {b} & {c}"
+
+
+@_generate_larger
+class Xor(BitwiseLogic, kind=ComponentKind.Xor):
+    op = "{a} ^ {b}"
+
+
+@_generate_larger
+class Xnor(BitwiseLogic, kind=ComponentKind.Xnor):
+    op = "~({a} ^ {b})"
+
+
+@_generate_larger
+class And(BitwiseLogic, kind=ComponentKind.And):
+    op = "{a} & {b}"
+
+
+@_generate_larger
+class Not(BitwiseLogic, kind=ComponentKind.Not):
     op = "~{a}"
+
+
+class FullAdder(TCComponent, kind=ComponentKind.FullAdder):
+    pass
+
+
+class Decoder1(TCComponent, kind=ComponentKind.Decoder1):
+    pass
+
+
+class Decoder2(TCComponent, kind=ComponentKind.Decoder2):
+    pass
+
+
+class Decoder3(TCComponent, kind=ComponentKind.Decoder3):
+    pass
+
+
+class BitMemory(MemoryComponent, kind=ComponentKind.BitMemory):
+    pass
+
+
+class VirtualBitMemory(MemoryComponent, kind=ComponentKind.VirtualBitMemory):
+    pass
+
+
+@_generate_larger
+class Neg(TCComponent):
+    pass
+
+
+@_generate_larger
+class Add(TCComponent):
+    pass
+
+
+@_generate_larger
+class Mul(TCComponent):
+    pass
+
+
+@_generate_larger
+class DivMod(TCComponent):
+    pass
+
+
+@_generate_larger
+class Shr(TCComponent):
+    pass
+
+
+@_generate_larger
+class Shl(TCComponent):
+    pass
+
+
+@_generate_larger
+class Ror(TCComponent):
+    pass
+
+
+@_generate_larger
+class Rol(TCComponent):
+    pass
+
+
+@_generate_larger
+class LessU(TCComponent):
+    pass
+
+
+@_generate_larger
+class LessI(TCComponent):
+    pass
+
+
+@_generate_larger
+class Register(MemoryComponent):
+    pass
+
+
+@_generate_larger
+class VirtualRegister(MemoryComponent):
+    pass
+
+
+@_generate_larger
+class Equal(TCComponent):
+    pass
 
 
 class LevelScreen(TCComponent, kind=ComponentKind.LevelScreen):
     pass
 
 
-class Program(TCComponent, kind=ComponentKind.Program):
+class Keyboard(TCComponent, kind=ComponentKind.Keyboard):
     pass
 
 
+@dataclass
+class Console(TCComponent, kind=ComponentKind.Console):
+    linked_to: tuple[int, int]
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        print(parse_component)
+        return super().build(parse_component,
+                             linked_to=tuple(map(int, filter(None, parse_component.custom_string.split(':')))),
+                             **kwargs)
+
+
+@dataclass
+class Halt(TCComponent, kind=ComponentKind.Halt):
+    msg: str
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, msg=parse_component.custom_string or "Halt", **kwargs)
+
+
+@dataclass
+class IndexerByte(TCComponent, kind=ComponentKind.IndexerByte):
+    offset: int
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, offset=parse_component.setting_1, **kwargs)
+
+
+@dataclass
+class IndexerBit(TCComponent, kind=ComponentKind.IndexerBit):
+    offset: int
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, offset=parse_component.setting_1, **kwargs)
+
+
+class ProbeMemoryBit(TCComponent, kind=ComponentKind.ProbeMemoryBit):
+    pass
+
+
+class ProbeMemoryWord(TCComponent, kind=ComponentKind.ProbeMemoryWord):
+    pass
+
+
+class ProbeWireBit(TCComponent, kind=ComponentKind.ProbeWireBit):
+    pass
+
+
+class ProbeWireWord(TCComponent, kind=ComponentKind.ProbeWireWord):
+    pass
+
+
+class SomeProgram(TCComponent):
+    selected_programs: dict[int, str]
+    watched_links: list[tuple[int, ...]]
+    data_width: int
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        print(parse_component)
+        return super().build(parse_component,
+                             selected_programs=parse_component.selected_programs,
+                             watched_links=[tuple(map(int, f.split(':')))
+                                            for f in filter(None, parse_component.custom_string.split(','))],
+                             **kwargs)
+
+
+@dataclass
+class Program(SomeProgram, kind=ComponentKind.Program):
+    selected_programs: dict[int, str]
+    watched_links: list[tuple[int, ...]]
+    data_width: int
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, data_width=8 * 2 ** parse_component.setting_2, **kwargs)
+
+
+@dataclass
+class Program8_1(SomeProgram, kind=ComponentKind.Program8_1):
+    selected_programs: dict[int, str]
+    watched_links: list[tuple[int, ...]]
+    data_width = 8
+
+
+@_generate_larger
 class Splitter(TCComponent):
     pass
 
 
-class Splitter8(Splitter, kind=ComponentKind.Splitter8):
-    pass
-
-
+@_generate_larger
 class Maker(TCComponent):
     pass
 
 
-class Maker8(Maker, kind=ComponentKind.Maker8):
+@_generate_larger
+class DelayLine(MemoryComponent):
     pass
 
 
-class DelayLine(TCComponent):
-    pass
-
-
-class VirtualDelayLine(TCComponent):
+@_generate_larger
+class VirtualDelayLine(MemoryComponent):
     pass
 
 
@@ -128,16 +445,125 @@ class VirtualDelayLine1(VirtualDelayLine, kind=ComponentKind.VirtualDelayLine1):
     pass
 
 
-class Constant(TCComponent):
+@_generate_larger
+class Switch(TCComponent):
+    pass
+
+
+class Switch1(Switch, kind=ComponentKind.Switch1):
+    pass
+
+
+@_generate_larger
+class Mux(TCComponent):
+    pass
+
+
+@_generate_larger
+@dataclass
+class Counter(MemoryComponent):
+    step: int
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, step=parse_component.setting_1, **kwargs)
+
+
+@_generate_larger
+@dataclass
+class VirtualCounter(MemoryComponent):
+    pass
+
+
+class SomeConstant(TCComponent):
     value: int
-    width: int
 
 
-class Off(Constant, kind=ComponentKind.Off):
+@_generate_larger
+@dataclass
+class Constant(SomeConstant):
+    value: int
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, **kwargs, value=parse_component.setting_1)
+
+
+class Off(SomeConstant, kind=ComponentKind.Off):
     value = 0
-    width = 1
 
 
-class On(Constant, kind=ComponentKind.On):
+class On(SomeConstant, kind=ComponentKind.On):
     value = 1
-    width = 1
+
+
+@dataclass
+class FileLoader(TCComponent, kind=ComponentKind.FileLoader):
+    default_file_path: str
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, default_file_path=parse_component.custom_string, **kwargs)
+
+
+@dataclass
+class RamLike(MemoryComponent):
+    word_width: int
+    word_count: int
+
+
+@dataclass
+class Ram(RamLike, kind=ComponentKind.Ram):
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        word_width = 8 * (2 ** parse_component.setting_2)
+        return super().build(parse_component, **kwargs, word_width=word_width,
+                             word_count=parse_component.setting_1 // word_width)
+
+
+@dataclass
+class VirtualRam(MemoryComponent, kind=ComponentKind.VirtualRam):
+    pass
+
+
+@dataclass
+class RamFast(RamLike, kind=ComponentKind.RamFast):
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        word_width = 8 * (2 ** parse_component.setting_2)
+        return super().build(parse_component, **kwargs, word_width=word_width,
+                             word_count=parse_component.setting_1 // word_width)
+
+
+@dataclass
+class VirtualRamFast(MemoryComponent, kind=ComponentKind.VirtualRamFast):
+    pass
+
+
+@dataclass
+class Rom(RamLike, kind=ComponentKind.Rom):
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        print(parse_component)
+        word_width = 8 * (2 ** parse_component.setting_2)
+        return super().build(parse_component, **kwargs, word_width=word_width,
+                             word_count=parse_component.setting_1 // word_width)
+
+
+@dataclass
+class VirtualRom(MemoryComponent, kind=ComponentKind.VirtualRom):
+    pass
+
+
+@dataclass
+class RamDualLoad(RamLike, kind=ComponentKind.RamDualLoad):
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        word_width = 8 * (2 ** parse_component.setting_2)
+        return super().build(parse_component, **kwargs, word_width=word_width,
+                             word_count=parse_component.setting_1 // word_width)
+
+
+@dataclass
+class VirtualRamDualLoad(MemoryComponent, kind=ComponentKind.VirtualRamDualLoad):
+    pass

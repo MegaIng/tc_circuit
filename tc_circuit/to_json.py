@@ -20,7 +20,7 @@ class TC2JSON(TCCompiler):
 
     wires: list[dict] = None
     nodes: dict[str, Any] = None
-    cluster_sources: dict[WireCluster, dict] = None
+    cluster_sources: dict[WireCluster, tuple[dict, int]] = None
 
     def compile(self, circuit: TCCircuit):
         self.wires = []
@@ -41,14 +41,16 @@ class TC2JSON(TCCompiler):
             'nodes': self.nodes,
         }
 
-    def _register_source(self, cluster: WireCluster, name: str, index: int):
+    def _register_source(self, cluster: WireCluster, name: str, index: int, width: int):
         assert cluster not in self.cluster_sources, "Bus style wires not supported"
-        self.cluster_sources[cluster] = {'component': name, 'index': index} if self.port_as_dict else [name, index]
+        port = {'component': name, 'index': index} if self.port_as_dict else [name, index]
+        self.cluster_sources[cluster] = port, width
 
     def _connect(self, cluster: WireCluster, name: str, index: int):
         assert cluster in self.cluster_sources, "Missing source for wire cluster"
-        port = {'component': name, 'index': index} if self.port_as_dict else [name, index]
-        self.wires.append({'from': self.cluster_sources[cluster], 'to': port})
+        src, w = self.cluster_sources[cluster]
+        target = {'component': name, 'index': index} if self.port_as_dict else [name, index]
+        self.wires.append({'from': src, 'to': target, 'width': w})
 
     def _new_node(self, prefix: str, data: dict[str, Any]) -> str:
         name = str(len(self.nodes)) if self.numeric_names else f'{prefix}_{len(self.nodes)}'
@@ -64,7 +66,7 @@ class TC2JSON(TCCompiler):
         for _, pin, cluster in self._get_outputs(comp):
             index = len(self.nodes[name]['components'])
             self.nodes[name]['components'].append(pin.width)
-            self._register_source(cluster, name, index)
+            self._register_source(cluster, name, index, pin.width)
 
     def _compile_output(self, comp: LevelOutputComponent):
         if self.condense_io:
@@ -80,13 +82,13 @@ class TC2JSON(TCCompiler):
     def _compile_constant(self, comp: Constant):
         name = self._new_node('Constant', {'type': 'Constant', 'width': comp.width, 'value': comp.value})
         for i, pin, cluster in self._get_outputs(comp):
-            self._register_source(cluster, name, i)
+            self._register_source(cluster, name, i, pin.width)
         () = self._get_inputs(comp)
 
     def _compile_generic(self, comp: TCComponent):
         name = self._new_node(comp.__class__.__name__, {'type': comp.__class__.__name__})
         for i, pin, cluster in self._get_outputs(comp):
-            self._register_source(cluster, name, i)
+            self._register_source(cluster, name, i, pin.width)
         for i, pin, cluster in self._get_inputs(comp):
             self._connect(cluster, name, i)
 
