@@ -1,11 +1,11 @@
 import json
 from functools import cached_property
 
-from pydantic import BaseModel, RootModel, BeforeValidator, ValidationInfo, model_validator
+from pydantic import BaseModel, BeforeValidator
 from save_monger import ComponentKind, Point
 from enum import Enum
 from importlib.resources import files
-from typing import Annotated
+from typing import Annotated, Any
 
 
 class PinKinds(Enum):
@@ -55,6 +55,7 @@ class ComponentInfo(BaseModel):
     backend_only: bool
     area: list[Annotated[Point, BeforeValidator(list_to_point)]]
     counterpart: Annotated[ComponentKind | None, enum_by_name(ComponentKind)] = None
+    other: dict[str, Any] | None = None
 
     @cached_property
     def pins_by_label(self):

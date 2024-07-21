@@ -3,7 +3,8 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import count
-from pprint import pp
+from typing import Literal
+
 from typing_extensions import Self
 
 from save_monger import ParseResult, ParseWire, Point
@@ -24,6 +25,7 @@ class WireCluster:
 class TCCircuit:
     components: dict[int, TCComponent]
     wires: dict[int, ParseWire]
+    _index: defaultdict[Point, list[tuple[Literal['wire', 'comp'], int]]] = None
     _clusters: tuple[dict[WireCluster, int], dict[Point, WireCluster]] | None = None
     _dependency_graph: dict[int, set[int]] | None = None
 
@@ -84,9 +86,21 @@ class TCCircuit:
                 assert not cluster.bidis, ("Can't construct dependency graph when Custom Components with bidi pins are "
                                            "present.")
                 srcs = {comp for comp, _ in cluster.sources}
-                for tgt,_ in cluster.targets:
+                for tgt, _ in cluster.targets:
                     self._dependency_graph[tgt].update(srcs)
         return self._dependency_graph
+
+    @property
+    def index(self) -> defaultdict[Point, list[tuple[Literal['wire', 'comp'], int]]]:
+        if self._index is None:
+            self._index = defaultdict(list)
+            for wid, wire in self.wires.items():
+                for p in wire.path:
+                    self._index[p].append(('wire', wid))
+            for cid, comp in self.components.items():
+                for p in comp.area():
+                    self._index[p].append(('comp', cid))
+        return self._index
 
     @classmethod
     def from_parse_state(cls, parse_state: ParseResult) -> Self:

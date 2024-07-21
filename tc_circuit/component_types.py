@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Callable, ClassVar, cast
+from contextvars import ContextVar
+from dataclasses import dataclass, fields
+from typing import Callable, ClassVar, cast, Iterable
 
 from save_monger import ComponentKind, ParseComponent, Point
 from tc_circuit.component_info import ComponentInfo, COMPONENT_INFOS
+
+cc_loader: ContextVar[Callable[[int], ComponentInfo]] = ContextVar('cc_loader', default=lambda cid: None)
 
 
 @dataclass
@@ -17,7 +20,9 @@ class TCComponent:
 
     def __init_subclass__(cls, **kwargs):
         if 'kind' in kwargs:
-            cls.info = COMPONENT_INFOS[kind := kwargs.pop('kind')]
+            kind = kwargs.pop('kind')
+            if kwargs.pop('retrieve_info', True):
+                cls.info = COMPONENT_INFOS[kind]
             if kind in cls.registry:
                 raise TypeError(f"ComponentKind {kind} already registered to type {cls.registry[kind]}"
                                 f" (can't register {cls})")
@@ -31,6 +36,18 @@ class TCComponent:
             rotation=parse_component.rotation,
             **kwargs  # type: ignore
         )
+
+    def area(self) -> Iterable[Point]:
+        xx, xy, yx, yy = ((1, 0, 0, 1), (0, -1, 1, 0), (-1, 0, 0, -1), (0, 1, -1, 0))[self.rotation]
+        for p in self.info.area:
+            yield self.pos + Point(x=p.x * xx + p.y * xy, y=p.x * yx + p.y * yy)
+
+    def describe(self) -> str:
+        lines = [f"{type(self).__name__}"]
+        for f in fields(self):
+            if f.name not in {'pos', 'rotation'}:
+                lines.append(f"{f.name}={getattr(self, f.name)}")
+        return "\n".join(lines)
 
 
 def _generate_larger(cls_or_pattern: type | str):
@@ -232,6 +249,11 @@ class Not(BitwiseLogic, kind=ComponentKind.Not):
     op = "~{a}"
 
 
+@_generate_larger("Buffer{n}")
+class Buffer1(BitwiseLogic, kind=ComponentKind.Buffer1):
+    op = "{a}"
+
+
 class FullAdder(TCComponent, kind=ComponentKind.FullAdder):
     pass
 
@@ -335,7 +357,6 @@ class Console(TCComponent, kind=ComponentKind.Console):
 
     @classmethod
     def build(cls, parse_component: ParseComponent, **kwargs):
-        print(parse_component)
         return super().build(parse_component,
                              linked_to=tuple(map(int, filter(None, parse_component.custom_string.split(':')))),
                              **kwargs)
@@ -391,7 +412,6 @@ class SomeProgram(TCComponent):
 
     @classmethod
     def build(cls, parse_component: ParseComponent, **kwargs):
-        print(parse_component)
         return super().build(parse_component,
                              selected_programs=parse_component.selected_programs,
                              watched_links=[tuple(map(int, f.split(':')))
@@ -544,7 +564,6 @@ class VirtualRamFast(MemoryComponent, kind=ComponentKind.VirtualRamFast):
 class Rom(RamLike, kind=ComponentKind.Rom):
     @classmethod
     def build(cls, parse_component: ParseComponent, **kwargs):
-        print(parse_component)
         word_width = 8 * (2 ** parse_component.setting_2)
         return super().build(parse_component, **kwargs, word_width=word_width,
                              word_count=parse_component.setting_1 // word_width)
@@ -567,3 +586,24 @@ class RamDualLoad(RamLike, kind=ComponentKind.RamDualLoad):
 @dataclass
 class VirtualRamDualLoad(MemoryComponent, kind=ComponentKind.VirtualRamDualLoad):
     pass
+
+
+@dataclass
+class CustomComponent(TCComponent, kind=ComponentKind.Custom, retrieve_info=False):
+    custom_displacement: Point
+    info: ComponentInfo
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        info = cc_loader.get()(parse_component.custom_id)
+        return super().build(parse_component, info=info, custom_displacement=parse_component.custom_displacement,
+                             **kwargs)
+
+    def area(self) -> Iterable[Point]:
+        xx, xy, yx, yy = ((1, 0, 0, 1), (0, -1, 1, 0), (-1, 0, 0, -1), (0, 1, -1, 0))[self.rotation]
+        d = self.custom_displacement - self.info.other['custom_displacement']
+        for p in self.info.area:
+            yield self.pos + (d + p).rotate(self.rotation)
+
+    def describe(self) -> str:
+        return f"Custom: {self.info.other['name']}"

@@ -8,10 +8,13 @@ authors = [{name = "MegaIng", email = "trampchamp@hotmail.de"}]
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: MIT License"]
 dynamic = ["version", "description"]
-dependencies = ['pydantic', 'save-monger']
+dependencies = ['pydantic', 'save-monger', 'pygame-ce']
 
 [project.scripts]
 tc-to-json = "tc_circuit.to_json:main"
+
+[project.gui-scripts]
+tc-viewer = "tc_circuit.pygame_viewer:main"
 
 [project.urls]
 Home = "https://github.com/MegaIng/tc_circuit"
