@@ -49,6 +49,9 @@ class TCComponent:
                 lines.append(f"{f.name}={getattr(self, f.name)}")
         return "\n".join(lines)
 
+    def local_to_global_pos(self, pos: Point) -> Point:
+        return self.pos + pos.rotate(self.rotation)
+
 
 def _generate_larger(cls_or_pattern: type | str):
     def inner(cls):
@@ -73,8 +76,13 @@ def _generate_larger(cls_or_pattern: type | str):
 
 
 @_generate_larger
+@dataclass
 class Input(TCComponent):
-    pass
+    label: str
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, label=parse_component.custom_string or cls.__name__, **kwargs)
 
 
 class Input1(Input, kind=ComponentKind.Input1):
@@ -82,8 +90,13 @@ class Input1(Input, kind=ComponentKind.Input1):
 
 
 @_generate_larger
+@dataclass
 class Output(TCComponent):
-    pass
+    label: str
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, label=parse_component.custom_string or cls.__name__, **kwargs)
 
 
 class Output1(Output, kind=ComponentKind.Output1):
@@ -91,8 +104,13 @@ class Output1(Output, kind=ComponentKind.Output1):
 
 
 @_generate_larger("Output{n}z")
+@dataclass
 class OutputZ(TCComponent):
-    pass
+    label: str
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, label=parse_component.custom_string or cls.__name__, **kwargs)
 
 
 class Output1z(TCComponent, kind=ComponentKind.Output1z):
@@ -100,11 +118,16 @@ class Output1z(TCComponent, kind=ComponentKind.Output1z):
 
 
 @_generate_larger
+@dataclass
 class Bidirectional(TCComponent):
-    pass
+    label: str
+
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        return super().build(parse_component, label=parse_component.custom_string or cls.__name__, **kwargs)
 
 
-class Bidirectional1(TCComponent, kind=ComponentKind.Bidirectional1):
+class Bidirectional1(Bidirectional, kind=ComponentKind.Bidirectional1):
     pass
 
 
@@ -250,8 +273,12 @@ class Not(BitwiseLogic, kind=ComponentKind.Not):
 
 
 @_generate_larger("Buffer{n}")
-class Buffer1(BitwiseLogic, kind=ComponentKind.Buffer1):
+class Buffer(BitwiseLogic):
     op = "{a}"
+
+
+class Buffer1(Buffer, kind=ComponentKind.Buffer1):
+    pass
 
 
 class FullAdder(TCComponent, kind=ComponentKind.FullAdder):
@@ -600,10 +627,13 @@ class CustomComponent(TCComponent, kind=ComponentKind.Custom, retrieve_info=Fals
                              **kwargs)
 
     def area(self) -> Iterable[Point]:
-        xx, xy, yx, yy = ((1, 0, 0, 1), (0, -1, 1, 0), (-1, 0, 0, -1), (0, 1, -1, 0))[self.rotation]
         d = self.custom_displacement - self.info.other['custom_displacement']
         for p in self.info.area:
-            yield self.pos + (d + p).rotate(self.rotation)
+            yield self.pos + (p + d).rotate(self.rotation)
+
+    def local_to_global_pos(self, pos: Point) -> Point:
+        d = self.custom_displacement - self.info.other['custom_displacement']
+        return self.pos + (pos + d).rotate(self.rotation)
 
     def describe(self) -> str:
         return f"Custom: {self.info.other['name']}"

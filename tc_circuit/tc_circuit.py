@@ -25,7 +25,7 @@ class WireCluster:
 class TCCircuit:
     components: dict[int, TCComponent]
     wires: dict[int, ParseWire]
-    _index: defaultdict[Point, list[tuple[Literal['wire', 'comp'], int]]] = None
+    _index: defaultdict[Point, list[tuple[Literal['wire', 'comp', 'pin'], int, int | None]]] = None
     _clusters: tuple[dict[WireCluster, int], dict[Point, WireCluster]] | None = None
     _dependency_graph: dict[int, set[int]] | None = None
 
@@ -91,15 +91,18 @@ class TCCircuit:
         return self._dependency_graph
 
     @property
-    def index(self) -> defaultdict[Point, list[tuple[Literal['wire', 'comp'], int]]]:
+    def index(self) -> defaultdict[Point, list[tuple[Literal['wire', 'comp', 'pin'], int, int | None]]]:
         if self._index is None:
             self._index = defaultdict(list)
             for wid, wire in self.wires.items():
                 for p in wire.path:
-                    self._index[p].append(('wire', wid))
+                    self._index[p].append(('wire', wid, None))
             for cid, comp in self.components.items():
                 for p in comp.area():
-                    self._index[p].append(('comp', cid))
+                    self._index[p].append(('comp', cid, None))
+                for i, pin in enumerate(comp.info.pins):
+                    p = comp.local_to_global_pos(pin.pos)
+                    self._index[p].append(('pin', cid, i))
         return self._index
 
     @classmethod

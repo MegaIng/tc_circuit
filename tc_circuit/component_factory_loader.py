@@ -77,7 +77,7 @@ class ComponentFactory:
                 }[c.info.pins[0].kind],
                                     width=c.info.pins[0].width,
                                     pos=Point(x=x, y=y) + displacement,
-                                    label=getattr(c, "label", "")))
+                                    label=getattr(c, "label", f"No label: {type(c).__name__}")))
                 pin_locations.add(pins[-1].pos)
 
         area = [r for p in area if (r := p + displacement) not in pin_locations]

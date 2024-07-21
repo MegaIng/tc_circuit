@@ -108,25 +108,40 @@ class CircuitRender:
                 hr.bottom -= 0.2
                 pg.draw.rect(self.view.screen, (255, 0, 255), self.view.w2s_r(hr))
             pg.draw.rect(self.view.screen, color, self.view.w2s_r(r))
+        for pin in component.info.pins:
+            p = component.local_to_global_pos(pin.pos)
+            center = self.view.w2s((p.x, p.y))
+            radius = self.view.scale / 3
+            pg.draw.circle(self.view.screen, color, center, radius)
 
     def draw(self):
         pos = self.view.s2w(pg.mouse.get_pos())
         highlighted = self.circuit.index[Point(x=int(round(pos[0])), y=int(round(pos[1])))]
         highlighted_wire_ids = {
             wid
-            for ht, cid in highlighted if ht == 'wire'
+            for ht, cid, _ in highlighted if ht == 'wire'
             for wid in self.circuit.clusters[1][self.circuit.wires[cid].start].segments
         }
         highlighted_components = {
-            cid for ht, cid in highlighted if ht == 'comp'
+            cid for ht, cid, _ in highlighted if ht == 'comp'
+        }
+        highlighted_pins = {
+            (cid, pid) for ht, cid, pid in highlighted if ht == 'pin'
         }
         for wid, wire in self.circuit.wires.items():
             self.draw_wire(wire, wid in highlighted_wire_ids)
         for cid, comp in self.circuit.components.items():
             self.draw_component(comp, cid in highlighted_components)
+        lines = None
         if highlighted_components:
             comp = self.circuit.components[highlighted_components.pop()]
             lines = comp.describe().splitlines()
+        elif highlighted_pins:
+            cid, pid = highlighted_pins.pop()
+            comp = self.circuit.components[cid]
+            pin = comp.info.pins[pid]
+            lines = [f'{pin.label}']
+        if lines is not None:
             images = [self.font.render(line, True, (255, 255, 255)) for line in lines]
             r = pg.Rect().unionall([img.get_rect().inflate(6, 6) for img in images])
             r.bottomleft = pg.mouse.get_pos()
@@ -177,6 +192,7 @@ class ViewerApp:
         if not Path(save, "schematics").is_dir():
             messagebox.showerror(title="Invalid Save Folder",
                                  message="This does not appear to be a valid TC save folder")
+            return
         self.save.schematics = Path(save) / "schematics"
         self.component_factory.reload()
 
@@ -207,6 +223,10 @@ class ViewerApp:
         pg.quit()
 
 
-if __name__ == '__main__':
+def main():
     app = ViewerApp()
     app.mainloop()
+
+
+if __name__ == '__main__':
+    main()
