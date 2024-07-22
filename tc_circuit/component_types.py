@@ -390,6 +390,21 @@ class Console(TCComponent, kind=ComponentKind.Console):
 
 
 @dataclass
+class SegmentDisplay(TCComponent, kind=ComponentKind.SegmentDisplay):
+    pass  # TODO: color info
+
+
+@dataclass
+class DotMatrixDisplay(TCComponent, kind=ComponentKind.DotMatrixDisplay):
+    pass  # TODO: extract info (orientation?)
+
+
+@dataclass
+class SpriteDisplay(TCComponent, kind=ComponentKind.SpriteDisplay):
+    pass  # TODO: extract info (image?)
+
+
+@dataclass
 class Halt(TCComponent, kind=ComponentKind.Halt):
     msg: str
 
@@ -588,6 +603,20 @@ class VirtualRamFast(MemoryComponent, kind=ComponentKind.VirtualRamFast):
 
 
 @dataclass
+class RamLatency(RamLike, kind=ComponentKind.RamLatency):
+    @classmethod
+    def build(cls, parse_component: ParseComponent, **kwargs):
+        word_width = 8 * (2 ** parse_component.setting_2)  # TODO: check that this is correct
+        return super().build(parse_component, **kwargs, word_width=word_width,
+                             word_count=parse_component.setting_1 // word_width)
+
+
+@dataclass
+class VirtualRamLatency(MemoryComponent, kind=ComponentKind.VirtualRamLatency):
+    pass
+
+
+@dataclass
 class Rom(RamLike, kind=ComponentKind.Rom):
     @classmethod
     def build(cls, parse_component: ParseComponent, **kwargs):
@@ -598,6 +627,16 @@ class Rom(RamLike, kind=ComponentKind.Rom):
 
 @dataclass
 class VirtualRom(MemoryComponent, kind=ComponentKind.VirtualRom):
+    pass
+
+
+@dataclass
+class Hdd(TCComponent, kind=ComponentKind.Hdd):
+    pass  # TODO: extract infos (size?)
+
+
+@dataclass
+class VirtualHdd(TCComponent, kind=ComponentKind.VirtualHdd):
     pass
 
 
@@ -638,6 +677,7 @@ class CustomComponent(TCComponent, kind=ComponentKind.Custom, retrieve_info=Fals
     def describe(self) -> str:
         return f"Custom: {self.info.other['name']}"
 
+
 @dataclass
 class LevelGate(TCComponent, kind=ComponentKind.LevelGate):
-    pass
+    pass  # TODO: extract infos

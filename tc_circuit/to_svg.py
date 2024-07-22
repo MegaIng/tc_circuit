@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import importlib.resources
+import re
 import sys
 from argparse import ArgumentParser, FileType
 from dataclasses import dataclass
@@ -26,43 +27,85 @@ IMAGE_OVERWRITES = {
     'Program': 'Program1',
     'IndexerBit': 'StateBit',
     'ProbeWireBit': 'StateBit',
+    'ProbeMemoryBit': 'StateBit',
     'IndexerByte': 'StateByte',
-    'ProbeWireByte': 'StateByte',
+    'ProbeWireWord': 'StateByte',
+    'ProbeMemoryWord': 'StateByte',
+
     'Counter8': 'Counter',
     'Decoder1': '1_decoder',
     'Decoder2': '2_decoder',
     'Decoder3': '3_decoder',
+
     'LevelOutputArch': 'Output1_1B',
     'LevelInputArch': 'Input1_1B',
+    'LevelInputCode': 'Input1B',
+    'LevelInputConditions': 'Input1B',
+    'LevelOutput1Sum': 'Output1',
+    'LevelOutput1Car': 'Output1',
+
+    'Output16': 'Input16',
+    'Output32': 'Input16',
+    'Output16z': 'Input16',
+    'Output32z': 'Input16',
+
+    'Buffer1': 'StateBit',
+
     'Mux8': 'Mux',
     'Mux16': 'Mux',
     'Mux32': 'Mux',
     'Mux64': 'Mux',
+
     'DelayLine1': 'DelayBuffer',
-    'FileLoader': 'FileRom'
+    'DelayLine8': 'DelayBuffer',
+    'DelayLine16': 'Register16',
+    'DelayLine32': 'Register16',
+    'DelayLine64': 'QwordRegister',
+    'Counter16': 'Register16',
+    'Counter32': 'Register16',
+    'Register8': 'Register',
+
+    'FileLoader': 'FileRom',
+    'RamFast': 'Ram',
+    'RamDualLoad': 'Ram',
+    'RamLatency': 'Ram',
+    'Hdd': 'Ram',
+    'Rom': 'Ram',
+    'Program8_1': 'Program1',
+
 }
 
 
 def get_image(base_name: str) -> Traversable:
-    to_try = [base_name]
+    TRANSFORMS = [
+        (r"(\w+)64", r"Qword\1"),
+        (r"(\w+)64", r"\g<1>Qword"),
+        (r"Level(\w+)", r"\1"),
+        (r"(\w+)Pin", r"\1"),
+        (r"(\w+)64", r"\g<1>8"),
+        (r"(\w+)8", r"\g<1>1B"),
+    ]
     if base_name in IMAGE_OVERWRITES:
-        to_try.append(IMAGE_OVERWRITES[base_name])
+        return importlib.resources.files('tc_circuit') / 'atlas' / f'{IMAGE_OVERWRITES[base_name]}.png'
+    to_try = {base_name}
+    for pat, sub in TRANSFORMS:
+        new_to_try = set(to_try)
+        for name in to_try:
+            new_to_try.add(re.sub(r"\A(?:" + pat + r")\Z", sub, name))
+        to_try = new_to_try
     if base_name.endswith('64'):
-        to_try.append(f'Qword{base_name[:-2]}')
-    if base_name.startswith('Level'):
-        to_try.append(base_name.removeprefix('Level'))
-    if base_name.endswith('64'):
-        to_try.append(f'Byte{base_name[:-2]}')
-        to_try.append(f'{base_name[:-2]}8')
+        to_try.add(f'Byte{base_name[:-2]}')
+        to_try.add(f'{base_name[:-2]}8')
     if base_name.endswith('32'):
-        to_try.append(f'{base_name[:-2]}16')
-        to_try.append(f'Byte{base_name[:-2]}')
-        to_try.append(f'{base_name[:-2]}8')
+        to_try.add(f'{base_name[:-2]}16')
+        to_try.add(f'Byte{base_name[:-2]}')
+        to_try.add(f'{base_name[:-2]}8')
     if base_name.endswith('16'):
-        to_try.append(f'Byte{base_name[:-2]}')
-        to_try.append(f'{base_name[:-2]}8')
+        to_try.add(f'Byte{base_name[:-2]}')
+        to_try.add(f'{base_name[:-2]}8')
     if base_name.endswith('8'):
-        to_try.append(f'Byte{base_name[:-1]}')
+        to_try.add(f'Byte{base_name[:-1]}')
+        to_try.add(f'{base_name[:-1]}B')
     for name in to_try:
         f = importlib.resources.files('tc_circuit') / 'atlas' / f'{name}.png'
         if f.is_file():
@@ -223,8 +266,8 @@ class ToSvg:
 
         cx, cy = (minx + maxx) / 2, (miny + maxy) / 2
         w, h = maxx - minx, maxy - miny
-        w *= 1.1
-        h *= 1.1
+        w += 5
+        h += 5
         self.svg['viewBox'] = f'{cx - w / 2} {cy - h / 2} {w} {h}'
 
     def draw_component(self, comp: ComponentInfo):
