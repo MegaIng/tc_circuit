@@ -12,6 +12,7 @@ dependencies = ['pydantic', 'save-monger', 'pygame-ce']
 
 [project.scripts]
 tc-to-json = "tc_circuit.to_json:main"
+tc-to-svg = "tc_circuit.to_svg:main"
 
 [project.gui-scripts]
 tc-viewer = "tc_circuit.pygame_viewer:main"

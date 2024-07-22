@@ -89,6 +89,7 @@ class ComponentFactory:
             area=area,
             counterpart=ComponentKind.VirtualCustom if needs_virtual else None,
             other={
+                'cid': ci.parse_result.save_id,
                 'name': ci.path.parent.name,
                 'custom_displacement': displacement
             }

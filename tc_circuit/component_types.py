@@ -637,3 +637,7 @@ class CustomComponent(TCComponent, kind=ComponentKind.Custom, retrieve_info=Fals
 
     def describe(self) -> str:
         return f"Custom: {self.info.other['name']}"
+
+@dataclass
+class LevelGate(TCComponent, kind=ComponentKind.LevelGate):
+    pass

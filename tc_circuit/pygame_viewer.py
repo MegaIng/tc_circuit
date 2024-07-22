@@ -15,7 +15,7 @@ from save_monger.tc_save import TCSave
 
 from tc_circuit.component_factory_loader import ComponentFactory
 from tc_circuit.component_types import TCComponent, cc_loader
-from tc_circuit.tc_circuit import TCCircuit
+from tc_circuit.tc_circuit import TCCircuit, WIRE_COLORS
 
 
 @dataclass
@@ -61,20 +61,6 @@ class ViewManager:
             delta = self.s2w(pg.mouse.get_pos()) - self._grabbed_position
             self.center -= delta
 
-
-WIRE_COLORS = [
-    ((227, 158, 69), (61, 153, 204), (60, 167, 163), (61, 183, 118), (61, 204, 61)),
-    ((219, 227, 69),) * 5,
-    ((250, 227, 69),) * 5,
-    ((69, 227, 150),) * 5,
-    ((69, 219, 227),) * 5,
-    ((92, 92, 235),) * 5,
-    ((150, 69, 227),) * 5,
-    ((227, 69, 201),) * 5,
-    ((227, 110, 79),) * 5,
-    ((255, 255, 255),) * 5,
-    ((122, 122, 122),) * 5,
-]
 
 
 @dataclass

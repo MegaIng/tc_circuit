@@ -5,7 +5,7 @@ from pydantic import BaseModel, BeforeValidator
 from save_monger import ComponentKind, Point
 from enum import Enum
 from importlib.resources import files
-from typing import Annotated, Any
+from typing import Annotated, Any, Iterable
 
 
 class PinKinds(Enum):
@@ -41,19 +41,19 @@ def enum_by_name(e: type):
     return BeforeValidator(validator)
 
 
-class PinInfo(BaseModel):
+class PinInfo(BaseModel, frozen=True):
     kind: str
     width: int
     pos: Annotated[Point, BeforeValidator(list_to_point)]
     label: str
 
 
-class ComponentInfo(BaseModel):
+class ComponentInfo(BaseModel, frozen=True):
     kind: ComponentKind
     category: Annotated[ComponentCategory, enum_by_name(ComponentCategory)]
-    pins: list[PinInfo]
+    pins: tuple[PinInfo, ...]
     backend_only: bool
-    area: list[Annotated[Point, BeforeValidator(list_to_point)]]
+    area: tuple[Annotated[Point, BeforeValidator(list_to_point)], ...]
     counterpart: Annotated[ComponentKind | None, enum_by_name(ComponentKind)] = None
     other: dict[str, Any] | None = None
 
@@ -63,6 +63,26 @@ class ComponentInfo(BaseModel):
         assert len(res) == len(self.pins), self.pins
         return res
 
+    def __hash__(self):
+        return hash((
+            self.kind, self.category, self.pins, self.backend_only, self.area,
+            self.counterpart, frozenset(self.other.items()) if self.other is not None else None
+        ))
+
+    def combined_pins(self) -> Iterable[PinInfo]:
+        if self.counterpart is None:
+            return self.pins
+        counterpart = COMPONENT_INFOS[self.counterpart]
+        if counterpart.category == ComponentCategory.has_virtual:
+            assert self.category == ComponentCategory.is_virtual, counterpart
+            return counterpart.combined_pins()
+        early_pins = self.pins
+        late_pins = []
+        for pin in counterpart.pins:
+            if pin not in early_pins:
+                assert pin.kind == 'input', pin
+                late_pins.append(PinInfo(kind='input_late', width=pin.width, pos=pin.pos, label=pin.label))
+        return (*early_pins, *late_pins)
 
 COMPONENT_INFOS: dict[ComponentKind, ComponentInfo] = {
     (kind := getattr(ComponentKind, name)): ComponentInfo(kind=kind, **value)
